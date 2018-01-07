@@ -35,39 +35,39 @@ while(True):
     if(contours != None):
         if(len(contours) > 0):
             largest_area = 0
-            largest_contour = 0;
+            cnt = 0;
             for i in range(0, len(contours)):
                 area = cv2.contourArea(contours[i])
                 if(area > largest_area):
                     largest_area = area
-                    largest_contour = contours[i]
+                    cnt = contours[i]
             color = (0,0,255)
-            for cnt in contours:
-                if(cnt.all() == largest_contour.all()):
-                    color = (255,0,0)
-                #cnt = contours[0]
-                # Extract boundary points of object
-                left = tuple(cnt[cnt[:,:,0].argmin()][0])
-                right = tuple(cnt[cnt[:,:,0].argmax()][0])
-                top = tuple(cnt[cnt[:,:,1].argmin()][0])
-                bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
+            #for cnt in contours:
+            # if(cnt.all() == largest_contour.all()):
+            #     color = (255,0,0)
+            #cnt = contours[0]
+            # Extract boundary points of object
+            left = tuple(cnt[cnt[:,:,0].argmin()][0])
+            right = tuple(cnt[cnt[:,:,0].argmax()][0])
+            top = tuple(cnt[cnt[:,:,1].argmin()][0])
+            bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
 
-                # Use boundary points to find the top left and bottom right corners
-                top_left = (left[0], top[1])
-                bottom_right = (right[0], bottom[1])
+            # Use boundary points to find the top left and bottom right corners
+            top_left = (left[0], top[1])
+            bottom_right = (right[0], bottom[1])
 
-                # Draw a rectangle bounding the object using top left and bottom right points
-                cv2.rectangle(img, top_left, bottom_right, color, 3)
+            # Draw a rectangle bounding the object using top left and bottom right points
+            cv2.rectangle(img, top_left, bottom_right, color, 3)
 
-                # Find the center point of the object
-                center = (int((top_left[0]+bottom_right[0])/2), int((top_left[1]+bottom_right[1])/2))
+            # Find the center point of the object
+            center = (int((top_left[0]+bottom_right[0])/2), int((top_left[1]+bottom_right[1])/2))
 
-                # Draw circle at the center point
-                cv2.circle(img, center, 5, (0,0,255), -1)
+            # Draw circle at the center point
+            cv2.circle(img, center, 5, (0,0,255), -1)
 
-                # Show the images
-                cv2.imshow("Scanned Image", img)
-                cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
+            # Show the images
+            cv2.imshow("Scanned Image", img)
+            cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
