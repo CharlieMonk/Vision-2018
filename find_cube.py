@@ -1,24 +1,9 @@
 import cv2
 import numpy as np
 import time
-def removeNoise():
-    kernel = np.ones((3,3), np.uint8)
-
-    cube_color_lower = np.array([190, 160, 60])
-    cube_color_upper = np.array([255, 255, 160])
-
-video_capture = cv2.VideoCapture(0)
-
-while(True):
-    # Get the frame
-    _, img = video_capture.read()
-
-    # Enable line below if reading from precaptured image
-    #img = cv2.imread("/Users/cbmonk/Downloads/cube1.jpg")
-
+def removeNoise(img, kernelSize):
     # Kernal to use for removing noise
-    kernel = np.ones((5,5), np.uint8)
-    cv2.imshow("Original Image", img)
+    kernel = np.ones(kernelSize, np.uint8)
 
     # Set values for thresholding
     cube_color_lower = np.array([0, 156, 139])
@@ -29,11 +14,25 @@ while(True):
     close_gaps = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     no_noise = cv2.morphologyEx(close_gaps, cv2.MORPH_OPEN, kernel)
     dilate = cv2.dilate(no_noise, kernel, iterations=5)
+    return dilate
+
+video_capture = cv2.VideoCapture(0)
+
+while(True):
+    # Get the frame
+    _, img = video_capture.read()
+
+    # Enable line below if reading from precaptured image
+    img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
+
+    dilate = removeNoise(img, (5,5))
 
     # Find boundary of object
     _, contours, hierarchy = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if(contours != None):
+        # Don't proceed if no contours are found
         if(len(contours) > 0):
+            # Find the largest contour
             largest_area = 0
             cnt = 0;
             for i in range(0, len(contours)):
@@ -42,10 +41,12 @@ while(True):
                     largest_area = area
                     cnt = contours[i]
             color = (0,0,255)
+
             #for cnt in contours:
             # if(cnt.all() == largest_contour.all()):
             #     color = (255,0,0)
             #cnt = contours[0]
+
             # Extract boundary points of object
             left = tuple(cnt[cnt[:,:,0].argmin()][0])
             right = tuple(cnt[cnt[:,:,0].argmax()][0])
