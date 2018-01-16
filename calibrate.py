@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-img = cv2.imread("/Users/cbmonk/Downloads/cube2.jpg")
+img = cv2.imread("/Users/cbmonk/Downloads/cube2.jpeg")
 cv2.imshow("img", img)
 
 lower = [255, 255, 255]

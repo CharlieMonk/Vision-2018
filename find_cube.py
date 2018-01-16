@@ -1,37 +1,39 @@
 import cv2
 import numpy as np
-import time
+import glob
+import os
 def removeNoise(img, kernelSize):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
 
     # Set values for thresholding
     cube_color_lower = np.array([0, 156, 139])
-    cube_color_upper = np.array([124, 183, 202])
+    cube_color_upper = np.array([114, 173, 192])
 
     # Remove noise
     mask = cv2.inRange(img, cube_color_lower, cube_color_upper)
     close_gaps = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     no_noise = cv2.morphologyEx(close_gaps, cv2.MORPH_OPEN, kernel)
-    dilate = cv2.dilate(no_noise, kernel, iterations=5)
+    dilate = cv2.dilate(no_noise, np.ones((5,10), np.uint8), iterations=5)
     return dilate
 
 video_capture = cv2.VideoCapture(0)
+video_capture.set(cv2.CAP_PROP_FPS, 10)
 
+counter = 0
 while(True):
     # Get the frame
     _, img = video_capture.read()
 
     # Enable line below if reading from precaptured image
-    img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
+    #img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
 
     dilate = removeNoise(img, (5,5))
 
     # Find boundary of object
     _, contours, hierarchy = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if(contours != None):
-        # Don't proceed if no contours are found
-        if(len(contours) > 0):
+        if(len(contours) > 0): # Don't proceed if no contours are found
             # Find the largest contour
             largest_area = 0
             cnt = 0;
@@ -70,6 +72,20 @@ while(True):
             cv2.imshow("Scanned Image", img)
             cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
 
+            # Log images
+            # image_dirs = sorted(glob.glob("Images[0-9][0-9][0-9][0-9]"))
+            # if len(image_dirs) != 0:
+            #     last_dir = image_dirs[-1]
+            #     dir_index = int(last_dir[-4:]) + 1
+            # os.mkdir(self.dir_name)
+            # else:
+            # dir_index = 1
+
+            path = os.path.join("/Users/cbmonk/Downloads/1234", str(counter) + ".jpg")
+            if(counter%10 == 0):
+                cv2.imwrite(path, img)
+                print(path)
+            counter+=1
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
