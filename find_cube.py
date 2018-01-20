@@ -65,6 +65,8 @@ video_capture = cv2.VideoCapture(0)
 video_capture.set(cv2.CAP_PROP_FPS, 10)
 
 counter = 0
+ranOnce = False
+folder = "/Users/cbmonk/Downloads/ImageLogging/"
 while(True):
     # Get the frame
     _, img = video_capture.read()
@@ -76,28 +78,28 @@ while(True):
     img2 = findObject(dilate)
     cv2.imshow("Objects found!", img)
 
-            # Log images
-            # image_dirs = sorted(glob.glob("Images[0-9][0-9][0-9][0-9]"))
-            # if len(image_dirs) != 0:
-            #     last_dir = image_dirs[-1]
-            #     dir_index = int(last_dir[-4:]) + 1
-            # os.mkdir(self.dir_name)
-            # else:
-            # dir_index = 1
-
-
-
-            index = 5
-            sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
-            if(len(sorted_glob)>0):
-                index = int(sorted_glob[-1])+1
-                print(index)
-            os.mkdir("/Users/cbmonk/Downloads/ImageLogging/"+str(index))
-            path = os.path.join("/Users/cbmonk/Downloads/1234", str(counter) + ".jpg")
-            if(counter%10 == 0):
-                cv2.imwrite(path, img)
-                print(path)
-            counter+=1
+    #Default index to use if no previous logging folders exist
+    logging_folder = "0001"
+    # Change the current directory to the logging folder (defined before this for loop began)
+    os.chdir(folder)
+    sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
+    if len(sorted_glob)>0 and (not ranOnce):
+        # If this is not the first logging folder, make a new folder with a 4 digit
+        # name one greater than the previous logging folder
+        logging_folder = "{:04d}".format(int(sorted_glob[-1])+1)
+        print(logging_folder)
+    if not ranOnce:
+        # If this is the first time the program has been run, make a logging folder
+        folder += logging_folder
+        os.mkdir(logging_folder)
+    # Path for the image to be saved
+    path = os.path.join(folder, str(counter) + ".jpg")
+    if(counter%10 == 0):
+        # Log every 10th image
+        cv2.imwrite(path, img)
+        print(path)
+    counter+=1
+    ranOnce = True
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
