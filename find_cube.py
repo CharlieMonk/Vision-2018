@@ -2,12 +2,15 @@ import cv2
 import numpy as np
 import glob
 import os
+import sys
+from udp_channels import UDPChannel
+import time
 def removeNoise(img, kernelSize):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
 
     # Set values for thresholding
-    cube_color_lower = np.array([0, 156, 139])
+    cube_color_lower = np.array([0, 146, 129])
     cube_color_upper = np.array([114, 173, 192])
 
     # Remove noise
@@ -51,26 +54,63 @@ def findObject(dilate):
             cv2.rectangle(img, top_left, bottom_right, color, 3)
 
             # Find the center point of the object
-            center = (int((top_left[0]+bottom_right[0])/2), int((top_left[1]+bottom_right[1])/2))
-
+            center_point = (int((top_left[0]+bottom_right[0])/2), int((top_left[1]+bottom_right[1])/2))
             # Draw circle at the center point
-            cv2.circle(img, center, 5, (0,0,255), -1)
+            cv2.circle(img, center_point, 5, (0,0,255), -1)
+            # Find the angle to the center point
+            angle = getAngle(center_point)
 
             # Show the images
             #cv2.imshow("Scanned Image", img)
             cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
             return img
 
-video_capture = cv2.VideoCapture(0)
-video_capture.set(cv2.CAP_PROP_FPS, 10)
+def getAngle(center_point):
+    field_of_view = 65
+    pixel_distance = center_point[0] - width/2
+    heading = ((field_of_view/2.0) * pixel_distance)/(width/2)
+    print(heading)
+    return int(heading)
+
+def sendData(angle):
+
+    data = {
+        "sender" : "vision",
+        "message" : "angle",
+    }
 
 counter = 0
 ranOnce = False
-folder = "/Users/cbmonk/Downloads/ImageLogging/"
+isTesting = False
+folder = "/var/log/"
+for arg in sys.argv:
+    if(arg == "test"):
+        folder = "/Users/cbmonk/Downloads/ImageLogging/"
+        isTesting = True
+        break
+
+# Setup UDP Channel
+if(not isTesting):
+    rio_ip = "10.10.76.2"
+    channel = None
+    while channel == None:
+        try:
+            channel = UDPChannel(remote_ip=rio_ip, remote_port=5880,
+                                 local_ip='0.0.0.0', local_port=5888, timeout_in_seconds=0.001)
+        except:
+            print("Error creating UDP Channel.")
+            time.sleep(1)
+
+video_capture = cv2.VideoCapture(0)
+video_capture.set(cv2.CAP_PROP_FPS, 10)
+_, img = video_capture.read()
+_, width, _ = img.shape
+print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
+
+
 while(True):
     # Get the frame
     _, img = video_capture.read()
-
     # Enable line below if reading from precaptured image
     #img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
 
@@ -84,8 +124,7 @@ while(True):
     os.chdir(folder)
     sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
     if len(sorted_glob)>0 and (not ranOnce):
-        # If this is not the first logging folder, make a new folder with a 4 digit
-        # name one greater than the previous logging folder
+        # Make a new folder with a 4 digit name one greater than the last logging folder
         logging_folder = "{:04d}".format(int(sorted_glob[-1])+1)
         print(logging_folder)
     if not ranOnce:
@@ -97,7 +136,7 @@ while(True):
     if(counter%10 == 0):
         # Log every 10th image
         cv2.imwrite(path, img)
-        print(path)
+        #print(path)
     counter+=1
     ranOnce = True
     if cv2.waitKey(1) & 0xFF == ord('q'):
