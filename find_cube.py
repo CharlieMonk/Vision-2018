@@ -17,19 +17,7 @@ def removeNoise(img, kernelSize):
     dilate = cv2.dilate(no_noise, np.ones((5,10), np.uint8), iterations=5)
     return dilate
 
-video_capture = cv2.VideoCapture(0)
-video_capture.set(cv2.CAP_PROP_FPS, 10)
-
-counter = 0
-while(True):
-    # Get the frame
-    _, img = video_capture.read()
-
-    # Enable line below if reading from precaptured image
-    #img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
-
-    dilate = removeNoise(img, (5,5))
-
+def findObject(dilate):
     # Find boundary of object
     _, contours, hierarchy = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if(contours != None):
@@ -69,8 +57,24 @@ while(True):
             cv2.circle(img, center, 5, (0,0,255), -1)
 
             # Show the images
-            cv2.imshow("Scanned Image", img)
+            #cv2.imshow("Scanned Image", img)
             cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
+            return img
+
+video_capture = cv2.VideoCapture(0)
+video_capture.set(cv2.CAP_PROP_FPS, 10)
+
+counter = 0
+while(True):
+    # Get the frame
+    _, img = video_capture.read()
+
+    # Enable line below if reading from precaptured image
+    #img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
+
+    dilate = removeNoise(img, (5,5))
+    img2 = findObject(dilate)
+    cv2.imshow("Objects found!", img)
 
             # Log images
             # image_dirs = sorted(glob.glob("Images[0-9][0-9][0-9][0-9]"))
@@ -81,6 +85,14 @@ while(True):
             # else:
             # dir_index = 1
 
+
+
+            index = 5
+            sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
+            if(len(sorted_glob)>0):
+                index = int(sorted_glob[-1])+1
+                print(index)
+            os.mkdir("/Users/cbmonk/Downloads/ImageLogging/"+str(index))
             path = os.path.join("/Users/cbmonk/Downloads/1234", str(counter) + ".jpg")
             if(counter%10 == 0):
                 cv2.imwrite(path, img)
