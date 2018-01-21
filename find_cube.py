@@ -5,6 +5,7 @@ import os
 import sys
 from udp_channels import UDPChannel
 import time
+import json
 def removeNoise(img, kernelSize):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
@@ -59,7 +60,8 @@ def findObject(dilate):
             cv2.circle(img, center_point, 5, (0,0,255), -1)
             # Find the angle to the center point
             angle = getAngle(center_point)
-
+            if(not isTesting):
+                sendData(angle)
             # Show the images
             #cv2.imshow("Scanned Image", img)
             cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
@@ -73,11 +75,11 @@ def getAngle(center_point):
     return int(heading)
 
 def sendData(angle):
-
     data = {
         "sender" : "vision",
-        "message" : "angle",
+        "message" : angle
     }
+    channel.send_to(json.dumps(data))
 
 counter = 0
 ranOnce = False
@@ -90,9 +92,9 @@ for arg in sys.argv:
         break
 
 # Setup UDP Channel
+rio_ip = "10.10.76.2"
+channel = None
 if(not isTesting):
-    rio_ip = "10.10.76.2"
-    channel = None
     while channel == None:
         try:
             channel = UDPChannel(remote_ip=rio_ip, remote_port=5880,
@@ -105,7 +107,7 @@ video_capture = cv2.VideoCapture(0)
 video_capture.set(cv2.CAP_PROP_FPS, 10)
 _, img = video_capture.read()
 _, width, _ = img.shape
-print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
+# print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
 
 
 while(True):
