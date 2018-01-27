@@ -1,10 +1,11 @@
 import numpy as np
 import cv2
 
-img = cv2.imread("/Users/cbmonk/Downloads/cube2.jpeg")
+img2 = cv2.imread("/Users/cbmonk/Downloads/cube2.jpeg")
+img = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
 cv2.imshow("img", img)
-
-lower = [255, 255, 255]
+print(img)
+lower = [360, 100, 100]
 upper = [0, 0, 0]
 
 for i in img:
