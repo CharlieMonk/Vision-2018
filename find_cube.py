@@ -6,18 +6,16 @@ import sys
 from udp_channels import UDPChannel
 import time
 import json
-def removeNoise(img, kernelSize):
+def removeNoise(img, kernelSize, lower_color_range, upper_color_range):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
 
     # Set values for thresholding
-    # cube_color_lower = np.array([0, 146, 129])
-    # cube_color_upper = np.array([114, 173, 192])
-    cube_color_lower = np.array([25, 100, 100])
-    cube_color_upper = np.array([28, 255, 215])
+    # lower_color_range = np.array([0, 146, 129])
+    # upper_color_range = np.array([114, 173, 192])
 
     # Remove noise
-    mask = cv2.inRange(img, cube_color_lower, cube_color_upper)
+    mask = cv2.inRange(img, lower_color_range, upper_color_range)
     cv2.imshow("img", mask)
     close_gaps = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     no_noise = cv2.morphologyEx(close_gaps, cv2.MORPH_OPEN, kernel)
@@ -123,8 +121,18 @@ while(True):
     # Enable line below if reading from precaptured image
     #img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
 
-    dilate = removeNoise(img, (5,5))
-    img2 = findObject(dilate)
+    # Find the cube
+    cube_hsv_lower = np.array([25, 100, 100])
+    cube_hsv_upper = np.array([28, 255, 215])
+    cube_dilate = removeNoise(img, (5,5), cube_hsv_lower, cube_hsv_upper)
+    cube_img = findObject(cube_dilate)
+
+    # Find the retroreflective tape
+    retro_hsv_lower = np.array([0, 0, 255])
+    retro_hsv_upper = np.array([0, 0, 255])
+    retro_dilate = removeNoise(img, (5,5), retro_hsv_lower, retro_hsv_upper)
+    retro_img = findObject(retro_dilate)
+
     cv2.imshow("Objects found!", img3)
 
     #Default index to use if no previous logging folders exist
