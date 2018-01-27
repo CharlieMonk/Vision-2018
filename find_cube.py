@@ -6,12 +6,12 @@ import sys
 from udp_channels import UDPChannel
 import time
 import json
-def removeNoise(img, kernelSize, lower_color_range, upper_color_range):
+def removeNoise(hsv_img, kernelSize, lower_color_range, upper_color_range):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
 
     # Convert image to binary
-    mask = cv2.inRange(img, lower_color_range, upper_color_range)
+    mask = cv2.inRange(hsv_img, lower_color_range, upper_color_range)
     # Show the binary (masked) image
     cv2.imshow("img", mask)
     # Close the gaps (due to noise) in the masked image
@@ -22,7 +22,7 @@ def removeNoise(img, kernelSize, lower_color_range, upper_color_range):
     dilate = cv2.dilate(no_noise, np.ones((5,10), np.uint8), iterations=5)
     return dilate
 
-def findObject(dilate):
+def findObject(dilate, objName):
     # Find boundary of object
     _, contours, hierarchy = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # Only proceed if contours were found
@@ -30,7 +30,7 @@ def findObject(dilate):
         if(len(contours) > 0):
             # Find the largest contour
             largest_area = 0
-            cnt = 0;
+            cnt = 0
             for i in range(0, len(contours)):
                 area = cv2.contourArea(contours[i])
                 if(area > largest_area):
@@ -43,26 +43,27 @@ def findObject(dilate):
             right = tuple(cnt[cnt[:,:,0].argmax()][0])
             top = tuple(cnt[cnt[:,:,1].argmin()][0])
             bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
-
-            print(right[0] - left[0])
+            # Find and print the width of the cube
+            width = right[0]-left[0]
+            print(objName + ": " + str(width))
             # Use boundary points to find the top left and bottom right corners
             top_left = (left[0], top[1])
             bottom_right = (right[0], bottom[1])
 
             # Draw a rectangle bounding the object using top left and bottom right points
-            cv2.rectangle(img3, top_left, bottom_right, color, 3)
+            cv2.rectangle(bgr_img, top_left, bottom_right, color, 3)
             # Find the center point of the object
             center_point = (int((top_left[0]+bottom_right[0])/2), int((top_left[1]+bottom_right[1])/2))
             # Draw circle at the center point
-            cv2.circle(img3, center_point, 5, (0,0,255), -1)
+            cv2.circle(bgr_img, center_point, 5, (0,0,255), -1)
             # Find the angle to the center point
             angle = getAngle(center_point)
+            # If the program isn't in testing mode, send data to RoboRIO
             if(not isTesting):
-                sendData(angle)
+                sendData(angle, width, objName)
             # Show the images
-            # cv2.imshow("Scanned Image", img)
             cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
-            return img
+            return hsv_img
 
 def getAngle(center_point):
     # Use the center_point, fov, and width to find the heading (angle to target)
@@ -72,12 +73,13 @@ def getAngle(center_point):
     # print(heading)
     return int(heading)
 
-def sendData(angle):
+def sendData(angle, width, objectBeingTracked):
     # Put the data (to be sent to the RIO) in a dictionary
     data = {
         "sender" : "vision",
-        "message" : angle,
-        "distance" : distance
+        "object" : objectBeingTracked,
+        "angle" : angle,
+        "width" : width
     }
     # Convert the data to JSON and send it to the RIO
     channel.send_to(json.dumps(data))
@@ -102,6 +104,7 @@ for arg in sys.argv:
 rio_ip = "10.10.76.2"
 channel = None
 if(not isTesting):
+    # Repeat until channel is successfully created
     while channel == None:
         try:
             channel = UDPChannel(remote_ip=rio_ip, remote_port=5880,
@@ -114,24 +117,24 @@ if(not isTesting):
 video_capture = cv2.VideoCapture(0)
 video_capture.set(cv2.CAP_PROP_FPS, 10)
 # Find the resolution of the webcam input
-_, img3 = video_capture.read()
-_, width, _ = img3.shape
+_, bgr_img = video_capture.read()
+_, width, _ = bgr_img.shape
 # print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
 
 
 while(True):
     # Read the frame from the video capture
-    _, img3 = video_capture.read()
+    _, bgr_img = video_capture.read()
     # Convert the frame to HSV
-    img = cv2.cvtColor(img3, cv2.COLOR_BGR2HSV)
+    hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
     # Enable line below if reading from precaptured image
-    # img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
+    # bgr_img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
 
     # Find the cube
     cube_hsv_lower = np.array([25, 100, 100])
     cube_hsv_upper = np.array([28, 255, 215])
-    cube_dilate = removeNoise(img, (5,5), cube_hsv_lower, cube_hsv_upper)
-    cube_img = findObject(cube_dilate)
+    cube_dilate = removeNoise(hsv_img, (5,5), cube_hsv_lower, cube_hsv_upper)
+    cube_img = findObject(cube_dilate, "cube")
 
     # Find the retroreflective tape
     # Use these HSV values if the LEDs are very bright
@@ -140,11 +143,11 @@ while(True):
     # Enable the below values if LEDs are NOT bright enough
     # retro_hsv_lower = np.array([71, 248, 221])
     # retro_hsv_upper = np.array([91, 255, 249])
-    retro_dilate = removeNoise(img, (5,5), retro_hsv_lower, retro_hsv_upper)
-    retro_img = findObject(retro_dilate)
+    retro_dilate = removeNoise(hsv_img, (5,5), retro_hsv_lower, retro_hsv_upper)
+    retro_img = findObject(retro_dilate, "retroreflective")
 
     # Display the BGR image with found objects bounded by rectangles
-    cv2.imshow("Objects found!", img3)
+    cv2.imshow("Objects found!", bgr_img)
 
     # Default index to use if no previous logging folders exist
     logging_folder = "0001"
@@ -155,7 +158,7 @@ while(True):
         # Make a new folder with a 4 digit name one greater than the last logging folder
         logging_folder = "{:04d}".format(int(sorted_glob[-1])+1)
         # print(logging_folder)
-    if not ranOnce:
+    if(not ranOnce):
         # If this is the first time the program has been run, make a logging folder
         folder += logging_folder
         os.mkdir(logging_folder)
@@ -163,8 +166,9 @@ while(True):
     path = os.path.join(folder, str(counter) + ".jpg")
     if(counter%10 == 0):
         # Log every 10th image
-        cv2.imwrite(path, img)
+        cv2.imwrite(path, hsv_img)
         # print(path)
+    # Keep track of how many times the program has run (for image logging)
     counter+=1
     ranOnce = True
     # Exit the loop when q is pressed
