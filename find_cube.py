@@ -6,6 +6,8 @@ import sys
 from udp_channels import UDPChannel
 import time
 import json
+import pickle
+import binascii
 def removeNoise(hsv_img, kernelSize, lower_color_range, upper_color_range):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
@@ -36,8 +38,11 @@ def findObject(dilate, objName):
                 if(area > largest_area):
                     largest_area = area
                     cnt = contours[i]
-            color = (0,0,255)
-
+            # If the object is cube, use red, if retroreflective, use blue
+            if(objName == "cube"):
+                color = (0,0,255)
+            elif(objName == "retroreflective"):
+                color = (255,0,0)
             # Extract boundary points of object
             left = tuple(cnt[cnt[:,:,0].argmin()][0])
             right = tuple(cnt[cnt[:,:,0].argmax()][0])
@@ -45,7 +50,7 @@ def findObject(dilate, objName):
             bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
             # Find and print the width of the cube
             width = right[0]-left[0]
-            print(objName + ": " + str(width))
+            # print(objName + ": " + str(width))
             # Use boundary points to find the top left and bottom right corners
             top_left = (left[0], top[1])
             bottom_right = (right[0], bottom[1])
@@ -54,10 +59,12 @@ def findObject(dilate, objName):
             cv2.rectangle(bgr_img, top_left, bottom_right, color, 3)
             # Find the center point of the object
             center_point = (int((top_left[0]+bottom_right[0])/2), int((top_left[1]+bottom_right[1])/2))
+
             # Draw circle at the center point
-            cv2.circle(bgr_img, center_point, 5, (0,0,255), -1)
+            cv2.circle(bgr_img, center_point, 5, color, -1)
             # Find the angle to the center point
             angle = getAngle(center_point)
+            print(objName + ": " + str(angle))
             # If the program isn't in testing mode, send data to RoboRIO
             if(not isTesting):
                 sendData(angle, width, objName)
@@ -70,16 +77,15 @@ def getAngle(center_point):
     field_of_view = 65
     pixel_distance = center_point[0] - width/2
     heading = ((field_of_view/2.0) * pixel_distance)/(width/2)
-    # print(heading)
     return int(heading)
 
-def sendData(angle, width, objectBeingTracked):
+def sendData(angle, width, objName):
     # Put the data (to be sent to the RIO) in a dictionary
     data = {
         "sender" : "vision",
-        "object" : objectBeingTracked,
-        "angle" : angle,
-        "width" : width
+        "object" : objName,
+        "angle" : int(angle),
+        "width" : int(width)
     }
     # Convert the data to JSON and send it to the RIO
     channel.send_to(json.dumps(data))
