@@ -6,16 +6,14 @@ import sys
 from udp_channels import UDPChannel
 import time
 import json
-import pickle
-import binascii
 def removeNoise(hsv_img, kernelSize, lower_color_range, upper_color_range):
     # Kernal to use for removing noise
     kernel = np.ones(kernelSize, np.uint8)
-
     # Convert image to binary
     mask = cv2.inRange(hsv_img, lower_color_range, upper_color_range)
     # Show the binary (masked) image
-    cv2.imshow("img", mask)
+    if(displayImages):
+        cv2.imshow("img", mask)
     # Close the gaps (due to noise) in the masked image
     close_gaps = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     # Remove noisy parts of the masked image
@@ -48,6 +46,7 @@ def findObject(dilate, objName):
             right = tuple(cnt[cnt[:,:,0].argmax()][0])
             top = tuple(cnt[cnt[:,:,1].argmin()][0])
             bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
+
             # Find and print the width of the cube
             width = right[0]-left[0]
             # print(objName + ": " + str(width))
@@ -69,14 +68,15 @@ def findObject(dilate, objName):
             if(not isTesting):
                 sendData(angle, width, objName)
             # Show the images
-            cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
+            if(displayImages):
+                cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
             return hsv_img
 
 def getAngle(center_point):
     # Use the center_point, fov, and width to find the heading (angle to target)
     field_of_view = 65
-    pixel_distance = center_point[0] - width/2
-    heading = ((field_of_view/2.0) * pixel_distance)/(width/2)
+    pixel_distance = center_point[0] - frame_width/2
+    heading = ((field_of_view/2.0) * pixel_distance)/(frame_width/2)
     return int(heading)
 
 def sendData(angle, width, objName):
@@ -98,13 +98,16 @@ ranOnce = False
 folder = "/var/log/"
 # Track if the program is being tested
 isTesting = False
+# Should the images be displayed on screen?
+displayImages = False
 # If test is found in the cmd line arguments, then the program is testing
 for arg in sys.argv:
     if(arg == "test"):
         # When testing, use an alternate filepath
         folder = "/Users/cbmonk/Downloads/ImageLogging/"
         isTesting = True
-        break
+    if(arg == "displayimages" or arg == "displayImages"):
+        displayImages = True
 
 # Setup UDP Channel
 rio_ip = "10.10.76.2"
@@ -124,7 +127,7 @@ video_capture = cv2.VideoCapture(0)
 video_capture.set(cv2.CAP_PROP_FPS, 10)
 # Find the resolution of the webcam input
 _, bgr_img = video_capture.read()
-_, width, _ = bgr_img.shape
+_, frame_width, _ = bgr_img.shape
 # print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
 
 
@@ -143,17 +146,18 @@ while(True):
     cube_img = findObject(cube_dilate, "cube")
 
     # Find the retroreflective tape
-    # Use these HSV values if the LEDs are very bright
-    retro_hsv_lower = np.array([0, 0, 255])
-    retro_hsv_upper = np.array([0, 0, 255])
+    # Use these HSV values if the LEDs are very bright and exposure is normal
+    # retro_hsv_lower = np.array([0, 0, 255])
+    # retro_hsv_upper = np.array([0, 0, 255])
     # Enable the below values if LEDs are NOT bright enough
-    # retro_hsv_lower = np.array([71, 248, 221])
-    # retro_hsv_upper = np.array([91, 255, 249])
+    retro_hsv_lower = np.array([87, 155, 230])
+    retro_hsv_upper = np.array([95, 200, 255])
     retro_dilate = removeNoise(hsv_img, (5,5), retro_hsv_lower, retro_hsv_upper)
     retro_img = findObject(retro_dilate, "retroreflective")
 
     # Display the BGR image with found objects bounded by rectangles
-    cv2.imshow("Objects found!", bgr_img)
+    if(displayImages):
+        cv2.imshow("Objects found!", bgr_img)
 
     # Default index to use if no previous logging folders exist
     logging_folder = "0001"
