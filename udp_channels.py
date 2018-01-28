@@ -4,6 +4,31 @@ import socket
 #  Set receive from timeout to .001 seconds to avoid blocking for
 #  long.
 #
+#  Revised for python3 (requires decoding and encoding string
+#  automatically so user doesn't have to deal with it.
+#
+#
+def test_basic_function():
+    """Do basic back and forth to make sure things work"""
+    loc_chan = UDPChannel()
+    rem_chan = UDPChannel(local_port=UDPChannel.default_remote_port,
+                        remote_port=UDPChannel.default_local_port)
+
+    # test basic send/receive (and string encode/decode)
+    loc_chan.send_to("hello from local")
+    reply, sender = rem_chan.receive_from()
+    assert(reply == "hello from local")
+
+    # and the reverse just to be sure
+    rem_chan.send_to("hello from remote")
+    reply, sender = loc_chan.receive_from()
+    assert(reply == "hello from remote")
+
+    # test timeout
+    reply, sender = loc_chan.receive_from()
+    assert(reply == None and sender == (None,None))
+
+
 class UDPChannel:
         """
         Create a communication channel to send and receive messages
@@ -24,38 +49,31 @@ class UDPChannel:
                      remote_port=default_remote_port,
                      timeout_in_seconds=0.001, receive_buffer_size=8192):
                 """Create the sending and receiving sockets for a communcation channel"""
-                try:
-                        self.local_ip = local_ip
-                        self.local_port = local_port
-                        self.remote_ip = remote_ip
-                        self.remote_port = remote_port
+                self.local_ip = local_ip
+                self.local_port = local_port
+                self.remote_ip = remote_ip
+                self.remote_port = remote_port
 
-                        # create the receive socket
-                        self.receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        self.receive_socket.bind((local_ip, local_port))
+                # create the receive socket
+                self.receive_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.receive_socket.bind((local_ip, local_port))
 
-                        # and the sending socket
-                        self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                # and the sending socket
+                self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-                        # cache other configurable parameters
-                        self.timeout_in_seconds = timeout_in_seconds
-                        self.receive_buffer_size = receive_buffer_size
-                except:
-                        print("Something went wrong")
+                # cache other configurable parameters
+                self.timeout_in_seconds = timeout_in_seconds
+                self.receive_buffer_size = receive_buffer_size
 
         def send_to(self, message):
                 """send message to the other end of the channel"""
-                self.send_socket.sendto(message, (self.remote_ip, self.remote_port))
-        def reply_to(self, message, ip, port):
-                """reply to a message from the other end of the channel."""
-                self.send_socket.sendto(message, (ip, port))
-
-        def receive_reply(self):
-                """receive a reply"""
-                self.send_socket.settimeout(self.timeout_in_seconds)
-                return self.send_socket.recvfrom(self.receive_buffer_size)
+                self.send_socket.sendto(message.encode(), (self.remote_ip, self.remote_port))
 
         def receive_from(self):
                 """wait for timeout to receive a message from channel"""
                 self.receive_socket.settimeout(self.timeout_in_seconds)
-                return self.receive_socket.recvfrom(self.receive_buffer_size)
+                try:
+                    reply, server_address_info = self.receive_socket.recvfrom(self.receive_buffer_size)
+                    return reply.decode(), server_address_info
+                except socket.timeout:
+                    return None, (None,None)
