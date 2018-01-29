@@ -136,20 +136,20 @@ def logImage(bgr_img, folder, ranOnce):
     # Change the current directory to the logging folder (defined before this for loop began)
     os.chdir(folder)
     sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
+    path = os.path.join(folder, str(counter) +".jpg")
     if len(sorted_glob)>0 and (not ranOnce):
         # Make a new folder with a 4 digit name one greater than the last logging folder
         logging_folder = "{:04d}".format(int(sorted_glob[-1])+1)
         # print(logging_folder)
-    path = os.path.join(folder, str(counter) +".jpg")
-    if(not ranOnce):
         # If this is the first time the program has been run, make a logging folder
         os.mkdir(logging_folder)
         # Path for the image to be saved
         path = os.path.join(folder, logging_folder, str(counter) + ".jpg")
-    # Log every 10th image
-    print(path)
+    # print(path)
+    # Save the image
     cv2.imwrite(path, bgr_img)
     if(not ranOnce):
+        # Return the filepath so it can be stored outside this scope
         return os.path.join(folder, logging_folder)
     return folder
 
