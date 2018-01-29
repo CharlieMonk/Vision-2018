@@ -65,7 +65,7 @@ def findObject(dilate, objName):
             angle = getAngle(center_point)
             print(objName + ": " + str(angle))
             # If the program isn't in testing mode, send data to RoboRIO
-            if(not isTesting):
+            if(not isTesting) and (objName == "cube"):
                 sendData(angle, width, objName)
             # Show the images
             if(displayImages):
@@ -95,7 +95,7 @@ counter = 0
 # Track if the program has ran (if not, create a new folder for image logging)
 ranOnce = False
 # Folder path for logging images
-folder = "/var/log/"
+#folder = "/var/log/"
 # Track if the program is being tested
 isTesting = False
 # Should the images be displayed on screen?
@@ -130,6 +130,28 @@ _, bgr_img = video_capture.read()
 _, frame_width, _ = bgr_img.shape
 # print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
 
+def logImage(bgr_img, folder, ranOnce):
+    # Default index to use if no previous logging folders exist
+    logging_folder = "0001"
+    # Change the current directory to the logging folder (defined before this for loop began)
+    os.chdir(folder)
+    sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
+    if len(sorted_glob)>0 and (not ranOnce):
+        # Make a new folder with a 4 digit name one greater than the last logging folder
+        logging_folder = "{:04d}".format(int(sorted_glob[-1])+1)
+        # print(logging_folder)
+    path = os.path.join(folder, str(counter) +".jpg")
+    if(not ranOnce):
+        # If this is the first time the program has been run, make a logging folder
+        os.mkdir(logging_folder)
+        # Path for the image to be saved
+        path = os.path.join(folder, logging_folder, str(counter) + ".jpg")
+    # Log every 10th image
+    print(path)
+    cv2.imwrite(path, bgr_img)
+    if(not ranOnce):
+        return os.path.join(folder, logging_folder)
+    return folder
 
 while(True):
     # Read the frame from the video capture
@@ -159,25 +181,11 @@ while(True):
     if(displayImages):
         cv2.imshow("Objects found!", bgr_img)
 
-    # Default index to use if no previous logging folders exist
-    logging_folder = "0001"
-    # Change the current directory to the logging folder (defined before this for loop began)
-    os.chdir(folder)
-    sorted_glob = sorted(glob.glob("[0-9][0-9][0-9][0-9]"))
-    if len(sorted_glob)>0 and (not ranOnce):
-        # Make a new folder with a 4 digit name one greater than the last logging folder
-        logging_folder = "{:04d}".format(int(sorted_glob[-1])+1)
-        # print(logging_folder)
-    if(not ranOnce):
-        # If this is the first time the program has been run, make a logging folder
-        folder += logging_folder
-        os.mkdir(logging_folder)
-    # Path for the image to be saved
-    path = os.path.join(folder, str(counter) + ".jpg")
+    # Log every 10th BGR image with the bounding boxes displayed
     if(counter%10 == 0):
-        # Log every 10th image
-        cv2.imwrite(path, hsv_img)
-        # print(path)
+        folder = logImage(bgr_img, folder, ranOnce)
+        ranOnce = True
+
     # Keep track of how many times the program has run (for image logging)
     counter+=1
     ranOnce = True
