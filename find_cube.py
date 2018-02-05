@@ -65,7 +65,7 @@ def findObject(dilate, objName):
             angle = getAngle(center_point)
             print(objName + ": " + str(angle))
             # If the program isn't in testing mode, send data to RoboRIO
-            if(not isTesting) and (objName == "cube"):
+            if(sendPackets) and (objName == "cube"):
                 sendData(angle, width, objName)
             # Show the images
             if(displayImages):
@@ -95,29 +95,37 @@ counter = 0
 # Track if the program has ran (if not, create a new folder for image logging)
 ranOnce = False
 # Folder path for logging images
-#folder = "/var/log/"
+folder = ""
 # Track if the program is being tested
 isTesting = False
 # Should the images be displayed on screen?
 displayImages = False
+# Should packets be sent?
+sendPackets = True
 # If test is found in the cmd line arguments, then the program is testing
 for arg in sys.argv:
-    if(arg == "test"):
-        # When testing, use an alternate filepath
-        folder = "/Users/cbmonk/Downloads/ImageLogging/"
-        isTesting = True
-    if(arg == "displayimages" or arg == "displayImages"):
+    if(not isTesting):
+        if(arg == "test"):
+            # When testing, use an alternate filepath
+            folder = "/Users/cbmonk/Downloads/ImageLogging/"
+            isTesting = True
+        else:
+            folder = "/var/log"
+    if(arg == "displayimages"):
         displayImages = True
+    if(arg == "nopackets"):
+        sendPackets = False
 
 # Setup UDP Channel
 rio_ip = "10.10.76.2"
 channel = None
-if(not isTesting):
+if(sendPackets):
     # Repeat until channel is successfully created
     while channel == None:
         try:
             channel = UDPChannel(remote_ip=rio_ip, remote_port=5880,
-                                 local_ip='0.0.0.0', local_port=5888, timeout_in_seconds=0.001)
+                                 local_ip='0.0.0.0', local_port=5888,
+                                 timeout_in_seconds=0.001)
         except:
             print("Error creating UDP Channel.")
             time.sleep(1)
@@ -154,6 +162,7 @@ def logImage(bgr_img, folder, ranOnce):
     return folder
 
 while(True):
+    time0 = time.time()
     # Read the frame from the video capture
     _, bgr_img = video_capture.read()
     # Convert the frame to HSV
@@ -189,6 +198,7 @@ while(True):
     # Keep track of how many times the program has run (for image logging)
     counter+=1
     ranOnce = True
+    print(time.time()-time0)
     # Exit the loop when q is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
