@@ -110,7 +110,7 @@ for arg in sys.argv:
             folder = "/Users/cbmonk/Downloads/ImageLogging/"
             isTesting = True
         else:
-            folder = "/var/log"
+            folder = "/var/log/Vision"
     if(arg == "displayimages"):
         displayImages = True
     if(arg == "nopackets"):
