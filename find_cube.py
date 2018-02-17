@@ -85,7 +85,7 @@ def sendData(angle, width, objName):
         "sender" : "vision",
         "object" : objName,
         "angle" : int(angle),
-        "width" : int(width)
+        "width" : int(width),
         "id" : counter
     }
     # Convert the data to JSON and send it to the RIO
