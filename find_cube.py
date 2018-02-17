@@ -67,7 +67,6 @@ def findObject(dilate, objName):
             # If the program isn't in testing mode, send data to RoboRIO
             if(sendPackets) and (objName == "cube"):
                 sendData(angle, width, objName)
-                packetNum += 1
             # Show the images
             if(displayImages):
                 cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
@@ -87,7 +86,7 @@ def sendData(angle, width, objName):
         "object" : objName,
         "angle" : int(angle),
         "width" : int(width)
-        "id" : packetNum
+        "id" : counter
     }
     # Convert the data to JSON and send it to the RIO
     channel.send_to(json.dumps(data))
@@ -104,8 +103,6 @@ isTesting = False
 displayImages = False
 # Should packets be sent?
 sendPackets = True
-# Packet Number
-packetNum = 0
 # If test is found in the cmd line arguments, then the program is testing
 for arg in sys.argv:
     if(not isTesting):
