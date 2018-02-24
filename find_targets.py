@@ -161,48 +161,48 @@ def logImage(bgr_img, folder, ranOnce):
         # Return the filepath so it can be stored outside this scope
         return os.path.join(folder, logging_folder)
     return folder
+if __name__ == "__main__":
+    while(True):
+        time0 = time.time()
+        # Read the frame from the video capture
+        _, bgr_img = video_capture.read()
+        # Convert the frame to HSV
+        hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+        # Enable line below if reading from precaptured image
+        # bgr_img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
 
-while(True):
-    time0 = time.time()
-    # Read the frame from the video capture
-    _, bgr_img = video_capture.read()
-    # Convert the frame to HSV
-    hsv_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-    # Enable line below if reading from precaptured image
-    # bgr_img = cv2.imread("/Users/cbmonk/Downloads/testf.png")
+        # Find the cube
+        cube_hsv_lower = np.array([25, 100, 100])
+        cube_hsv_upper = np.array([28, 255, 215])
+        cube_dilate = removeNoise(hsv_img, (5,5), cube_hsv_lower, cube_hsv_upper)
+        cube_img = findObject(cube_dilate, "cube")
 
-    # Find the cube
-    cube_hsv_lower = np.array([25, 100, 100])
-    cube_hsv_upper = np.array([28, 255, 215])
-    cube_dilate = removeNoise(hsv_img, (5,5), cube_hsv_lower, cube_hsv_upper)
-    cube_img = findObject(cube_dilate, "cube")
+        # Find the retroreflective tape
+        # Use these HSV values if the LEDs are very bright and exposure is normal
+        # retro_hsv_lower = np.array([0, 0, 255])
+        # retro_hsv_upper = np.array([0, 0, 255])
+        # Enable the below values if LEDs are NOT bright enough
+        retro_hsv_lower = np.array([87, 155, 230])
+        retro_hsv_upper = np.array([95, 200, 255])
+        retro_dilate = removeNoise(hsv_img, (5,5), retro_hsv_lower, retro_hsv_upper)
+        retro_img = findObject(retro_dilate, "retroreflective")
 
-    # Find the retroreflective tape
-    # Use these HSV values if the LEDs are very bright and exposure is normal
-    # retro_hsv_lower = np.array([0, 0, 255])
-    # retro_hsv_upper = np.array([0, 0, 255])
-    # Enable the below values if LEDs are NOT bright enough
-    retro_hsv_lower = np.array([87, 155, 230])
-    retro_hsv_upper = np.array([95, 200, 255])
-    retro_dilate = removeNoise(hsv_img, (5,5), retro_hsv_lower, retro_hsv_upper)
-    retro_img = findObject(retro_dilate, "retroreflective")
+        # Display the BGR image with found objects bounded by rectangles
+        if(displayImages):
+            cv2.imshow("Objects found!", bgr_img)
 
-    # Display the BGR image with found objects bounded by rectangles
-    if(displayImages):
-        cv2.imshow("Objects found!", bgr_img)
+        # Log every 10th BGR image with the bounding boxes displayed
+        if(counter%10 == 0):
+            folder = logImage(bgr_img, folder, ranOnce)
+            ranOnce = True
 
-    # Log every 10th BGR image with the bounding boxes displayed
-    if(counter%10 == 0):
-        folder = logImage(bgr_img, folder, ranOnce)
+        # Keep track of how many times the program has run (for image logging)
+        counter+=1
         ranOnce = True
-
-    # Keep track of how many times the program has run (for image logging)
-    counter+=1
-    ranOnce = True
-    print(time.time()-time0)
-    # Exit the loop when q is pressed
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        print(time.time()-time0)
+        # Exit the loop when q is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 # Release the video capture and close the windows when q is pressed
 video_capture.release()
