@@ -65,7 +65,7 @@ def findObject(dilate, objName):
             angle = getAngle(center_point)
             print(objName + ": " + str(angle))
             # If the program isn't in testing mode, send data to RoboRIO
-            if(sendPackets) and (objName == "cube"):
+            if(sendPackets):
                 sendData(angle, width, objName)
             # Show the images
             if(displayImages):
@@ -74,9 +74,12 @@ def findObject(dilate, objName):
 
 def getAngle(center_point):
     # Use the center_point, fov, and width to find the heading (angle to target)
+    offset = 90 #37
+    point = center_point[0] - offset
     field_of_view = 65
-    pixel_distance = center_point[0] - frame_width/2
+    pixel_distance = point - frame_width/2
     heading = ((field_of_view/2.0) * pixel_distance)/(frame_width/2)
+    print(pixel_distance)
     return int(heading)
 
 def sendData(angle, width, objName):
@@ -91,6 +94,19 @@ def sendData(angle, width, objName):
     # Convert the data to JSON and send it to the RIO
     channel.send_to(json.dumps(data))
 
+def reduceExposure():
+    zero = "v4l2-ctl --device=/dev/video0 -c gain_automatic=0 -c "
+    one = "white_balance_automatic=0 -c exposure=5 -c gain=0 -c "
+    two = "auto_exposure=1 -c brightness=0 -c hue=-32 -c saturation=96"
+    cmd0 = zero + one + two
+    print("cmd:", cmd0)
+    os.system(cmd0)
+    zero = "v4l2-ctl --device=/dev/video0 -c gain_automatic=0 -c "
+    one = "white_balance_automatic=0 -c exposure=5"
+    cmd1 = zero + one
+    print(cmd1)
+    os.system(cmd1)
+
 # Set up a counter, for use in logging images
 counter = 0
 # Track if the program has ran (if not, create a new folder for image logging)
@@ -103,15 +119,21 @@ isTesting = False
 displayImages = False
 # Should packets be sent?
 sendPackets = True
+# Should exposure be reduced?
+shouldReduceExposure = True
 # If test is found in the cmd line arguments, then the program is testing
 for arg in sys.argv:
     if(not isTesting):
+        if(arg == "cube"):
+            shouldReduceExposure = False
         if(arg == "test"):
             # When testing, use an alternate filepath
             folder = "/Users/cbmonk/Downloads/ImageLogging/"
             isTesting = True
         else:
             folder = "/var/log/Vision"
+            if(shouldReduceExposure):
+                reduceExposure()
     if(arg == "displayimages"):
         displayImages = True
     if(arg == "nopackets"):
@@ -127,8 +149,9 @@ if(sendPackets):
             channel = UDPChannel(remote_ip=rio_ip, remote_port=5880,
                                  local_ip='0.0.0.0', local_port=5888,
                                  timeout_in_seconds=0.001)
-        except:
-            print("Error creating UDP Channel.")
+        except Exception as e:
+            print("Error creating UDP Channel.", e)
+
             time.sleep(1)
 
 # Set up the webcam input
@@ -137,6 +160,7 @@ video_capture.set(cv2.CAP_PROP_FPS, 10)
 # Find the resolution of the webcam input
 _, bgr_img = video_capture.read()
 _, frame_width, _ = bgr_img.shape
+print(frame_width)
 # print("----"+"\n\n\nWidth: " + str(width)+"\n\n\n----")
 
 def logImage(bgr_img, folder, ranOnce):
@@ -182,8 +206,10 @@ if __name__ == "__main__":
         # retro_hsv_lower = np.array([0, 0, 255])
         # retro_hsv_upper = np.array([0, 0, 255])
         # Enable the below values if LEDs are NOT bright enough
-        retro_hsv_lower = np.array([87, 155, 230])
-        retro_hsv_upper = np.array([95, 200, 255])
+        # retro_hsv_lower = np.array([87, 155, 230])
+        # retro_hsv_upper = np.array([95, 200, 255])
+        retro_hsv_lower = np.array([46, 125, 171])
+        retro_hsv_upper = np.array([57, 255, 255])
         retro_dilate = removeNoise(hsv_img, (5,5), retro_hsv_lower, retro_hsv_upper)
         retro_img = findObject(retro_dilate, "retroreflective")
 
@@ -199,7 +225,7 @@ if __name__ == "__main__":
         # Keep track of how many times the program has run (for image logging)
         counter+=1
         ranOnce = True
-        print(time.time()-time0)
+        #print(time.time()-time0)
         # Exit the loop when q is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
