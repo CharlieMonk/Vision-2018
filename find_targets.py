@@ -62,8 +62,17 @@ def findObject(dilate, objName):
             # Draw circle at the center point
             cv2.circle(bgr_img, center_point, 5, color, -1)
             # Find the angle to the center point
-            angle = getAngle(center_point)
-            print(objName + ": " + str(angle))
+            offset = 90
+            adjusted_point = center_point[0] - offset
+            color = (0,255,0)
+            cv2.circle(bgr_img, (adjusted_point, center_point[1]), 5, color, -1)
+            """Camera in center vs camera in """
+            # If camera is NOT in center, use this
+            #angle = getAngle(adjusted_point, offset)
+            # If camera IS in center, use this
+            angle = getAngle(center_point[0], offset)
+
+            print(objName, ":", angle)
             # If the program isn't in testing mode, send data to RoboRIO
             if(sendPackets):
                 sendData(angle, width, objName)
@@ -72,10 +81,8 @@ def findObject(dilate, objName):
                 cv2.imshow("Mask Image", dilate)   # This should be enabled for debugging purposes ONLY!
             return hsv_img
 
-def getAngle(center_point):
+def getAngle(point, offset):
     # Use the center_point, fov, and width to find the heading (angle to target)
-    offset = 90 #37
-    point = center_point[0] - offset
     field_of_view = 65
     pixel_distance = point - frame_width/2
     heading = ((field_of_view/2.0) * pixel_distance)/(frame_width/2)
