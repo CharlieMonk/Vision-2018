@@ -61,17 +61,18 @@ def findObject(dilate, objName):
 
             # Draw circle at the center point
             cv2.circle(bgr_img, center_point, 5, color, -1)
-            # Find the angle to the center point
-            offset = 90
-            adjusted_point = center_point[0] - offset
-            color = (0,255,0)
-            cv2.circle(bgr_img, (adjusted_point, center_point[1]), 5, color, -1)
-            """Camera in center vs camera in """
-            # If camera is NOT in center, use this
-            #angle = getAngle(adjusted_point, offset)
-            # If camera IS in center, use this
-            angle = getAngle(center_point[0], offset)
 
+            isOffCenter = True # Enable if camera is off center
+            angle = None
+            if(isOffCenter): # If camera is NOT in center, use this
+                # Find the angle to the center point
+                offset = 90
+                adjusted_point = center_point[0] - offset
+                angle = getAngle(adjusted_point, offset)
+                cv2.circle(bgr_img, (adjusted_point, center_point[1]), 5, color, -1)
+            else:
+                # If camera IS in center, use this
+                angle = getAngle(center_point[0], 0)
             print(objName, ":", angle)
             # If the program isn't in testing mode, send data to RoboRIO
             if(sendPackets):
