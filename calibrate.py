@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
 
-bgr_img = cv2.imread("/Users/cbmonk/Downloads/gearlift_2ft.jpeg")
+bgr_img = cv2.imread("/Users/cbmonk/Downloads/370.jpg")
 img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 cv2.imshow("img", img)
+cv2.imshow("bgr_img", bgr_img)
 print(img)
 lower = [360, 360, 360]
 upper = [0, 0, 0]
