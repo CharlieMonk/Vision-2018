@@ -128,7 +128,7 @@ displayImages = False
 # Should packets be sent?
 sendPackets = True
 # Should exposure be reduced?
-shouldReduceExposure = True
+shouldReduceExposure = False
 # If test is found in the cmd line arguments, then the program is testing
 for arg in sys.argv:
     if(not isTesting):
