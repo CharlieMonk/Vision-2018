@@ -24,7 +24,7 @@ def removeNoise(hsv_img, kernelSize, lower_color_range, upper_color_range):
 
 def findObject(dilate, objName):
     # Find boundary of object
-    _, contours, hierarchy = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # Only proceed if contours were found
     if(contours != None):
         if(len(contours) > 0):
@@ -48,7 +48,7 @@ def findObject(dilate, objName):
             bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
 
             # Find and print the width of the cube
-            width = right[0]-left[0]
+            width = right[0] - left[0]
             # print(objName + ": " + str(width))
             # Use boundary points to find the top left and bottom right corners
             top_left = (left[0], top[1])
@@ -62,7 +62,7 @@ def findObject(dilate, objName):
             # Draw circle at the center point
             cv2.circle(bgr_img, center_point, 5, color, -1)
 
-            isOffCenter = True # Enable if camera is off center
+            isOffCenter = False # Enable if camera is off center
             angle = None
             if(isOffCenter): # If camera is NOT in center, use this
                 # Find the angle to the center point
@@ -73,7 +73,7 @@ def findObject(dilate, objName):
             else:
                 # If camera IS in center, use this
                 angle = getAngle(center_point[0])
-            print(objName + ":", angle)
+            print(objName, ":", angle)
             # If the program isn't in testing mode, send data to RoboRIO
             if(sendPackets):
                 sendData(angle, width, objName)
@@ -128,7 +128,7 @@ displayImages = False
 # Should packets be sent?
 sendPackets = True
 # Should exposure be reduced?
-shouldReduceExposure = False
+shouldReduceExposure = True
 # If test is found in the cmd line arguments, then the program is testing
 for arg in sys.argv:
     if(not isTesting):
@@ -189,6 +189,7 @@ def logImage(bgr_img, folder, ranOnce):
     # print(path)
     # Save the image
     cv2.imwrite(path, bgr_img)
+
     if(not ranOnce):
         # Return the filepath so it can be stored outside this scope
         return os.path.join(folder, logging_folder)
@@ -206,7 +207,7 @@ if __name__ == "__main__":
         # Find the cube
         cube_hsv_lower = np.array([25, 100, 100])
         cube_hsv_upper = np.array([28, 255, 215])
-        cube_dilate = removeNoise(hsv_img, (5,5), cube_hsv_lower, cube_hsv_upper)
+        cube_dilate = removeNoise(hsv_img, (5,5), cube_hsv_lower,cube_hsv_upper)
         cube_img = findObject(cube_dilate, "cube")
 
         # Find the retroreflective tape
@@ -216,7 +217,7 @@ if __name__ == "__main__":
         # Enable the below values if LEDs are NOT bright enough
         # retro_hsv_lower = np.array([87, 155, 230])
         # retro_hsv_upper = np.array([95, 200, 255])
-        retro_hsv_lower = np.array([46, 125, 171])
+        retro_hsv_lower = np.array([43, 125, 171])
         retro_hsv_upper = np.array([57, 255, 255])
         retro_dilate = removeNoise(hsv_img, (5,5), retro_hsv_lower, retro_hsv_upper)
         retro_img = findObject(retro_dilate, "retroreflective")
