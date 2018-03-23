@@ -24,7 +24,7 @@ def removeNoise(hsv_img, kernelSize, lower_color_range, upper_color_range):
 
 def findObject(dilate, objName):
     # Find boundary of object
-    _, contours, _ = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, hierarchy = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # Only proceed if contours were found
     if(contours != None):
         if(len(contours) > 0):
